@@ -23,7 +23,7 @@ pub fn main() -> Result<(), pw::Error> {
 
     let data: f64 = 0.0;
 
-    let stream = pw::stream::Stream::new(
+    let (stream, _core) = pw::stream::Stream::new(
         &core,
         "audio-src",
         properties! {

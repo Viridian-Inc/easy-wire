@@ -22,6 +22,15 @@ use crate::{utils::assert_main_thread, Error};
 /// An owned version, [`Loop`], is available,
 /// which lets you create and own a [`pw_loop`](`pw_sys::pw_loop`),
 /// but other objects, such as [`MainLoop`](`crate::main_loop::MainLoop`), also contain them.
+
+struct LoopRefWrapper(LoopRef);
+
+impl AsRef<LoopRef> for LoopRefWrapper {
+    fn as_ref(&self) -> &LoopRef {
+        &self.0
+    }
+}
+
 #[repr(transparent)]
 pub struct LoopRef(pw_sys::pw_loop);
 
@@ -369,6 +378,10 @@ impl LoopRef {
             source.as_ptr()
         )
     }
+}
+
+pub fn loop_from_ptr(ptr: pw_sys::pw_loop) -> LoopRef {
+    LoopRef(ptr)
 }
 
 pub trait AsLoop {

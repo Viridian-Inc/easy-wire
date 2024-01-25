@@ -35,7 +35,7 @@ pub fn main() -> Result<(), pw::Error> {
         format: Default::default(),
     };
 
-    let stream = pw::stream::Stream::new(
+    let (stream, _core) = pw::stream::Stream::new(
         &core,
         "video-test",
         properties! {

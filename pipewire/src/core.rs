@@ -204,6 +204,10 @@ struct CoreInner {
     _context: crate::context::Context,
 }
 
+pub fn create_core_inner(ptr: ptr::NonNull<pw_sys::pw_core>, context: crate::context::Context) -> Core {
+    Core::from_ptr(ptr, context)
+}
+
 impl CoreInner {
     fn from_ptr(ptr: ptr::NonNull<pw_sys::pw_core>, _context: crate::context::Context) -> Self {
         Self { ptr, _context }

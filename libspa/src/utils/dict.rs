@@ -8,13 +8,17 @@ use bitflags::bitflags;
 pub use spa_sys::spa_dict_item;
 use std::{convert::TryInto, ffi::CStr, fmt, marker::PhantomData, ptr};
 
-#[repr(transparent)]
+#[repr(transparent) ] #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct DictRef(spa_sys::spa_dict);
 
 impl DictRef {
     /// Returns a reference to the raw [`spa_sys::spa_dict`] this struct represents.
     pub fn as_raw(&self) -> &spa_sys::spa_dict {
         &self.0
+    }
+
+    pub fn into(self) -> DictRef {
+        self.clone()
     }
 
     /// Returns the pointer to the raw [`spa_sys::spa_dict`] this struct represents.

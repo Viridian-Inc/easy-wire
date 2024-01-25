@@ -131,11 +131,13 @@ pub mod registry;
 pub mod stream;
 pub mod thread_loop;
 pub mod types;
+pub mod monitor; // Created by Viridian-Inc
+pub mod manager; // Created by Viridian-Inc
 
 mod error;
 pub use error::*;
-
 mod utils;
+
 
 pub use pw_sys as sys;
 pub use spa;

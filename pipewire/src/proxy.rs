@@ -52,7 +52,7 @@ impl Proxy {
     ///
     /// The downcast will fail if the type that the proxy represents does not match the provided type. \
     /// In that case, the function returns `(self, Error::WrongProxyType)` so that the proxy is not lost.
-    pub(crate) fn downcast<P: ProxyT>(self) -> Result<P, (Self, Error)> {
+    pub fn downcast<P: ProxyT>(self) -> Result<P, (Self, Error)> {
         // Make sure the proxy we got has the type that is requested
         if P::type_() == self.get_type().0 {
             unsafe { Ok(P::from_proxy_unchecked(self)) }

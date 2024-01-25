@@ -18,6 +18,12 @@ use std::{
     pin::Pin,
     ptr,
 };
+use std::ptr::NonNull;
+use std::rc::Rc;
+use pw_sys::pw_time;
+use crate::context::{Context, ContextInner, create_context_from_loop};
+use crate::core::create_core_inner;
+use crate::loop_::{loop_from_ptr, LoopInner, LoopRef};
 
 #[derive(Debug, PartialEq)]
 pub enum StreamState {
@@ -54,38 +60,24 @@ impl StreamState {
 /// `D` is the user data, to allow passing extra context to the callbacks.
 pub struct Stream {
     ptr: ptr::NonNull<pw_sys::pw_stream>,
-    // objects that need to stay alive while the Stream is
-    _core: Core,
 }
 
 impl Stream {
     /// Create a [`Stream`]
     ///
     /// Initialises a new stream with the given `name` and `properties`.
-    pub fn new(core: &Core, name: &str, properties: Properties) -> Result<Self, Error> {
+    pub fn new(core: &Core, name: &str, properties: Properties) -> Result<(Self, Core), Error> {
         let name = CString::new(name).expect("Invalid byte in stream name");
         let stream = unsafe {
             pw_sys::pw_stream_new(core.as_raw_ptr(), name.as_ptr(), properties.into_raw())
         };
         let stream = ptr::NonNull::new(stream).ok_or(Error::CreationFailed)?;
 
-        Ok(Stream {
-            ptr: stream,
-            _core: core.clone(),
-        })
+        Ok((Stream {ptr: stream}, core.clone()))
     }
 
     pub fn into_raw(self) -> *mut pw_sys::pw_stream {
-        let mut this = std::mem::ManuallyDrop::new(self);
-
-        // FIXME: self needs to be wrapped in ManuallyDrop so the raw stream
-        //        isn't destroyed. However, the core should still be dropped.
-        //        Is there a cleaner and safer way to drop the core than like this?
-        unsafe {
-            ptr::drop_in_place(ptr::addr_of_mut!(this._core));
-        }
-
-        this.ptr.as_ptr()
+        self.ptr.as_ptr()
     }
 }
 
@@ -151,7 +143,6 @@ impl StreamRef {
     ///
     /// Tries to connect to the node `id` in the given `direction`. If no node
     /// is provided then any suitable node will be used.
-    // FIXME: high-level API for params
     pub fn connect(
         &self,
         direction: spa::utils::Direction,
@@ -324,8 +315,47 @@ impl StreamRef {
         Ok(())
     }
 
-    // TODO: pw_stream_get_core()
-    // TODO: pw_stream_get_time()
+    // TODO: test this function.
+    pub fn get_core(&self) -> Result<Core, Error> {
+        // Retrieve the core pointer from the stream.
+        let core_ptr = unsafe { pw_sys::pw_stream_get_core(self.as_raw_ptr()) };
+        // Ensure the core pointer is not null.
+        let core_non_null = NonNull::new(core_ptr).ok_or(Error::CreationFailed)?;
+
+        // Retrieve the context associated with the core.
+        let context_ptr = unsafe { pw_sys::pw_core_get_context(core_ptr) };
+        // Ensure the context pointer is not null.
+        let context_non_null = NonNull::new(context_ptr).ok_or(Error::CreationFailed)?;
+
+        // Get the main loop from the context.
+        let main_loop_ptr = unsafe { pw_sys::pw_context_get_main_loop(context_ptr) };
+        // Ensure the main loop pointer is not null.
+        let main_loop_non_null = NonNull::new(main_loop_ptr).ok_or(Error::CreationFailed)?;
+
+        // Convert the non-null main loop pointer to a LoopInner instance.
+        let loop_inner = unsafe { LoopInner::from_raw(main_loop_non_null) };
+        // Wrap the loop inner in a reference-counted pointer with dynamic dispatch.
+        let loop_ref_rc: Rc<dyn AsRef<LoopRef>> = Rc::new(loop_inner);
+
+        // Construct the context object with its inner representation.
+        let context = Context {
+            inner: Rc::new(ContextInner {
+                ptr: context_non_null,
+                _loop: loop_ref_rc,
+            }),
+        };
+
+        // Create and return the core object.
+        let core = create_core_inner(core_non_null, context);
+        Ok(core)
+    }
+
+    // TODO: pw_stream_get_time_n()
+    // Implement this after we have a way to get the time from the core and made stream manager
+
+    // pub fn get_time(&self) -> Result<i32, Error> {
+    //     unsafe { pw_sys::pw_stream_get_time_n(self.as_raw_ptr(), , ) as i32 }
+    // }
 }
 
 type ParamChangedCB<D> = dyn FnMut(&StreamRef, &mut D, u32, Option<&spa::pod::Pod>);

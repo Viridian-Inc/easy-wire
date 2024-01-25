@@ -42,14 +42,23 @@ impl ContextRef {
 
 #[derive(Clone, Debug)]
 pub struct Context {
-    inner: Rc<ContextInner>,
+    pub(crate) inner: Rc<ContextInner>,
 }
 
 pub struct ContextInner {
-    ptr: ptr::NonNull<pw_sys::pw_context>,
+    pub(crate) ptr: ptr::NonNull<pw_sys::pw_context>,
     /// Store the loop here, so that the loop is not dropped before the context, which may lead to
     /// undefined behaviour.
-    _loop: Rc<dyn AsRef<LoopRef>>,
+    pub(crate) _loop: Rc<dyn AsRef<LoopRef>>,
+}
+
+pub fn create_context_from_loop(ptr: *mut pw_sys::pw_context, loop_: Rc<dyn AsRef<LoopRef>>) -> Context {
+    Context {
+        inner: Rc::new(ContextInner {
+            ptr: ptr::NonNull::new(ptr).expect("context is NULL"),
+            _loop: loop_,
+        }),
+    }
 }
 
 impl fmt::Debug for ContextInner {

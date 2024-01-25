@@ -7,14 +7,13 @@
 
 use clap::Parser;
 use pipewire as pw;
-use pw::{properties::properties, spa};
-use spa::param::format::{MediaSubtype, MediaType};
-use spa::param::format_utils;
+use pw::{spa};
+use spa::param::format_utils::{parse_format};
 use spa::pod::Pod;
-#[cfg(feature = "v0_3_44")]
-use spa::WritableDict;
 use std::convert::TryInto;
 use std::mem;
+use pipewire::properties::properties;
+use spa::param::format::{MediaSubtype, MediaType};
 
 struct UserData {
     format: spa::param::audio::AudioInfoRaw,
@@ -26,6 +25,30 @@ struct UserData {
 struct Opt {
     #[clap(short, long, help = "The target object id to connect to")]
     target: Option<String>,
+}
+
+struct Streams {
+    streams: Vec<pw::stream::Stream>,
+}
+
+impl Streams {
+    fn new() -> Self {
+        Self {
+            streams: Vec::new(),
+        }
+    }
+
+    fn add_stream(&mut self, stream: pw::stream::Stream) {
+        self.streams.push(stream);
+    }
+
+    fn remove_stream(&mut self, stream: pw::stream::Stream) {
+        self.streams.retain(|s| s.name() != stream.name());
+    }
+
+    // fn get_streams_of_type(&self, media_type: MediaType) -> Vec<&pw::stream::Stream> {
+    //     self.streams.iter().filter(|s| s == media_type).collect()
+    // }
 }
 
 pub fn main() -> Result<(), pw::Error> {
@@ -52,13 +75,13 @@ pub fn main() -> Result<(), pw::Error> {
      * the data.
      */
     #[cfg(not(feature = "v0_3_44"))]
-    let props = properties! {
+        let mut props = properties! {
         *pw::keys::MEDIA_TYPE => "Audio",
         *pw::keys::MEDIA_CATEGORY => "Capture",
         *pw::keys::MEDIA_ROLE => "Music",
     };
     #[cfg(feature = "v0_3_44")]
-    let props = {
+        let mut props = {
         let opt = Opt::parse();
 
         let mut props = properties! {
@@ -73,22 +96,29 @@ pub fn main() -> Result<(), pw::Error> {
     };
 
     // uncomment if you want to capture from the sink monitor ports
-    // props.insert(*pw::keys::STREAM_CAPTURE_SINK, "true");
+    props.insert(*pw::keys::STREAM_CAPTURE_SINK, "true");
 
-    let stream = pw::stream::Stream::new(&core, "audio-capture", props)?;
+    // Capture app audio via NODE_ID
+    //props.insert(*pw::keys::NODE_ID, "145"); // Set to the node id of the application you would like to capture
+    // Capture app audio via OBJECT_ID
+    //props.insert(*pw::keys::OBJECT_ID, "145"); // Set to the object id of the application you would like to capture
+    // Capture app audio via OBJECT_SERIAL
+    //props.insert(*pw::keys::OBJECT_SERIAL, "145"); // Set to the object serial of the application you would like to capture
+
+    let (stream, _core) = pw::stream::Stream::new(&core, "capture-audio", props)?;
 
     let _listener = stream
         .add_local_listener_with_user_data(data)
-        .param_changed(|_, user_data, id, param| {
+        .param_changed(|_, user_data, id, pod| {
             // NULL means to clear the format
-            let Some(param) = param else {
+            let Some(pod): Option<&Pod> = pod else {
                 return;
             };
-            if id != pw::spa::param::ParamType::Format.as_raw() {
+            if id != spa::param::ParamType::Format.as_raw() {
                 return;
             }
 
-            let (media_type, media_subtype) = match format_utils::parse_format(param) {
+            let (media_type, media_subtype) = match parse_format(pod) {
                 Ok(v) => v,
                 Err(_) => return,
             };
@@ -101,7 +131,7 @@ pub fn main() -> Result<(), pw::Error> {
             // call a helper function to parse the format for us.
             user_data
                 .format
-                .parse(param)
+                .parse(pod)
                 .expect("Failed to parse param changed to AudioInfoRaw");
 
             println!(
@@ -126,7 +156,16 @@ pub fn main() -> Result<(), pw::Error> {
                     if user_data.cursor_move {
                         print!("\x1B[{}A", n_channels + 1);
                     }
-                    println!("captured {} samples", n_samples / n_channels);
+                    match (n_samples, n_channels) {
+                        (s, d) if s < 1 || d < 1 => {
+                            println!("Failed: samples {} | channels {}", n_samples, n_channels);
+                        }
+                        (s, d) if s >= 1 && d >= 1 => {
+                            println!("Success: captured {} samples", n_samples / n_channels);
+                        }
+                        _ => (),
+                    }
+
                     for c in 0..n_channels {
                         let mut max: f32 = 0.0;
                         for n in (c..n_samples).step_by(n_channels as usize) {
@@ -180,7 +219,7 @@ pub fn main() -> Result<(), pw::Error> {
      * called in a realtime thread. */
     stream.connect(
         spa::utils::Direction::Input,
-        None,
+        Some(5254),
         pw::stream::StreamFlags::AUTOCONNECT
             | pw::stream::StreamFlags::MAP_BUFFERS
             | pw::stream::StreamFlags::RT_PROCESS,
