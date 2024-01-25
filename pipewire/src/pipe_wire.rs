@@ -53,7 +53,7 @@ impl Proxies {
 #[derive(Clone)]
 pub struct PipeWire {
     proxies: Arc<Mutex<Proxies>>,
-    node_info: Arc<Mutex<HashMap<u32, DictRef>>>,
+    //node_info: Arc<Mutex<HashMap<u32, DictRef>>>,
     core: Arc<Mutex<Option<crate::core::Core>>>,
     main_loop: Arc<Mutex<Option<main_loop::MainLoop>>>,
 }
@@ -62,7 +62,7 @@ impl PipeWire {
     pub fn new() -> Result<Self, String> {
         Ok(Self {
             proxies: Arc::new(Mutex::new(Proxies::new())),
-            node_info: Default::default(),
+            //node_info: Default::default(),
             core: Arc::new(Mutex::new(None)),
             main_loop: Arc::new(Mutex::new(None)),
         })
