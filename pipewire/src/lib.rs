@@ -137,6 +137,8 @@ pub mod pipe_wire; // Created by Viridian-Inc
 mod error;
 pub use error::*;
 mod utils;
+mod e_stream;
+mod e_listener;
 
 
 pub use pw_sys as sys;

@@ -45,10 +45,6 @@ impl Streams {
     fn remove_stream(&mut self, stream: pw::stream::Stream) {
         self.streams.retain(|s| s.name() != stream.name());
     }
-
-    // fn get_streams_of_type(&self, media_type: MediaType) -> Vec<&pw::stream::Stream> {
-    //     self.streams.iter().filter(|s| s == media_type).collect()
-    // }
 }
 
 pub fn main() -> Result<(), pw::Error> {

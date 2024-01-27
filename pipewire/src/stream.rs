@@ -185,6 +185,18 @@ impl StreamRef {
         Ok(())
     }
 
+    // pub fn update_properties(&self, properties: Properties) -> Result<(), Error> {
+    //     let r = unsafe {
+    //         pw_sys::pw_stream_update_properties(
+    //             self.as_raw_ptr(),
+    //             properties.into_raw(),
+    //         )
+    //     };
+    //
+    //     SpaResult::from_c(r).into_sync_result()?;
+    //     Ok(())
+    // }
+
     /// Activate or deactivate the stream
     pub fn set_active(&self, active: bool) -> Result<(), Error> {
         let r = unsafe { pw_sys::pw_stream_set_active(self.as_raw_ptr(), active) };
@@ -316,6 +328,7 @@ impl StreamRef {
     }
 
     // TODO: test this function.
+    // Do we have some of the information available to us???
     pub fn get_core(&self) -> Result<Core, Error> {
         // Retrieve the core pointer from the stream.
         let core_ptr = unsafe { pw_sys::pw_stream_get_core(self.as_raw_ptr()) };
