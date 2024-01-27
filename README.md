@@ -1,4 +1,4 @@
-# pipewire-rs
+# easy-wire | pipewire-rs
 
 ### Rust bindings for pipewire and SPA libraries
 
@@ -8,7 +8,9 @@
 - [Examples](https://gitlab.freedesktop.org/pipewire/pipewire-rs/-/tree/main/pipewire/examples)
 - [How to contribute](https://gitlab.freedesktop.org/pipewire/pipewire-rs/-/blob/main/docs/CONTRIBUTING.md)
 
-### **These bindings are work-in-progress. Expect frequent breakage, bugs and missing features.**
+### **This wrapper is in progress but is a POC of removing the need to set up the pipewire main loop in your program**
+### **These bindings are work-in-progress. Expect frequent breakage, bugs, and missing features.**
+### Example pw-mon is currently the only somewhat working example. Note: I am still setting up the base wrapper and will start cleaning up the code.
 
 ## Requirements
 - Rust 1.64 or newer
